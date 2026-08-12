@@ -110,7 +110,15 @@ export default function AdminDashboard(){
         {loading ? <div>Carregando pedidos...</div> : (
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <input value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} placeholder="Pesquisar por ID, telefone ou nome" className="p-2 border rounded w-80" />
+              <div className="flex items-center">
+                <input value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} placeholder="Pesquisar por ID, telefone ou nome" className="p-2 border rounded w-80" disabled={loading} />
+                {loading && (
+                  <svg className="animate-spin h-5 w-5 text-gray-600 ml-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                )}
+              </div>
               <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} className="p-2 border rounded">
                 <option value="">Todos os status</option>
                 <option value="novo">novo</option>
@@ -126,8 +134,8 @@ export default function AdminDashboard(){
                   <option value="entregue">entregue</option>
                   <option value="cancelado">cancelado</option>
                 </select>
-                <button onClick={()=>updateBatchStatus(document.getElementById('batchStatus').value)} className="px-3 py-2 bg-[#1F6B45] text-white rounded">Atualizar selecionados</button>
-                <button onClick={notifySelected} className="px-3 py-2 border rounded">Notificar selecionados (WhatsApp)</button>
+                <button onClick={()=>updateBatchStatus(document.getElementById('batchStatus').value)} className="px-3 py-2 bg-[#1F6B45] text-white rounded" disabled={loading}>Atualizar selecionados</button>
+                <button onClick={notifySelected} className="px-3 py-2 border rounded" disabled={loading}>Notificar selecionados (WhatsApp)</button>
               </div>
             </div>
 
@@ -172,12 +180,12 @@ export default function AdminDashboard(){
           </div>
             <div className="flex items-center justify-between mt-4">
               <div>
-                <button onClick={gotoPrev} disabled={page<=1} className="px-3 py-1 border rounded mr-2">Anterior</button>
-                <button onClick={gotoNext} disabled={page>=totalPages} className="px-3 py-1 border rounded">Próxima</button>
+                <button onClick={gotoPrev} disabled={page<=1 || loading} className="px-3 py-1 border rounded mr-2">Anterior</button>
+                <button onClick={gotoNext} disabled={page>=totalPages || loading} className="px-3 py-1 border rounded">Próxima</button>
               </div>
               <div className="text-sm">Página {page} de {totalPages}</div>
               <div>
-                <select value={limit} onChange={(e)=>{ setLimit(Number(e.target.value)); setPage(1); }} className="p-1 border rounded">
+                <select value={limit} onChange={(e)=>{ setLimit(Number(e.target.value)); setPage(1); }} className="p-1 border rounded" disabled={loading}>
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={25}>25</option>
