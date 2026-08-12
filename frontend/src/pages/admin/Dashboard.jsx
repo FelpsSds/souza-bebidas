@@ -53,6 +53,29 @@ export default function AdminDashboard(){
     }catch(err){ console.error(err); alert('Erro de rede') }
   }
 
+    function normalizePhoneForWhatsApp(raw){
+      if(!raw) return ''
+      const digits = String(raw).replace(/\D/g,'')
+      // if looks like local BR (10 or 11 digits), prefix country code 55
+      if(digits.length === 10 || digits.length === 11) return `55${digits}`
+      return digits
+    }
+
+    function notifyWhatsApp(order){
+      const phone = normalizePhoneForWhatsApp(order.phone || (order.customer && order.customer.phone))
+      if(!phone) return alert('Número inválido')
+      const items = (order.items||[]).map(i=>`${i.quantity}x Produto#${i.productId}`).join(', ')
+      const msg = `Olá ${order.customer && order.customer.name ? order.customer.name : ''}, seu pedido #${order.id} agora está com status: ${order.status}. Itens: ${items}. Total: R$ ${Number(order.total).toFixed(2)}. Obrigado!`;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`
+      window.open(url, '_blank')
+    }
+
+    function notifySelected(){
+      if(!selected || selected.length===0) return alert('Selecione ao menos um pedido')
+      const toNotify = orders.filter(o=> selected.includes(o.id))
+      toNotify.forEach(o=> notifyWhatsApp(o))
+    }
+
   return (
     <div>
       <Header />
@@ -77,6 +100,7 @@ export default function AdminDashboard(){
                   <option value="cancelado">cancelado</option>
                 </select>
                 <button onClick={()=>updateBatchStatus(document.getElementById('batchStatus').value)} className="px-3 py-2 bg-[#1F6B45] text-white rounded">Atualizar selecionados</button>
+                <button onClick={notifySelected} className="px-3 py-2 border rounded">Notificar selecionados (WhatsApp)</button>
               </div>
             </div>
 
@@ -110,6 +134,9 @@ export default function AdminDashboard(){
                         <option value="entregue">entregue</option>
                         <option value="cancelado">cancelado</option>
                       </select>
+                      <div className="mt-2 flex gap-2">
+                        <button onClick={()=>notifyWhatsApp(o)} className="px-3 py-2 border rounded">Notificar (WhatsApp)</button>
+                      </div>
                     </div>
                   </div>
                 </div>
