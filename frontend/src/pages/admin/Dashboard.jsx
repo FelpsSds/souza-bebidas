@@ -8,6 +8,9 @@ export default function AdminDashboard(){
   const [selected, setSelected] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(1)
+  const [limit, setLimit] = useState(10)
+  const [totalPages, setTotalPages] = useState(1)
   const navigate = useNavigate()
   const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
 
@@ -15,14 +18,17 @@ export default function AdminDashboard(){
     const token = localStorage.getItem('sb_token')
     if(!token) return navigate('/admin/login')
     setLoading(true)
-    fetch(`${API_BASE}/api/orders`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_BASE}/api/orders?page=${page}&limit=${limit}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r=>{
         if(r.status === 401) { localStorage.removeItem('sb_token'); navigate('/admin/login'); return null }
         return r.json()
       }).then(js=>{
-        if(js && js.ok) setOrders(js.data)
+        if(js && js.ok){
+          setOrders(js.data)
+          if(js.meta){ setTotalPages(js.meta.totalPages || 1) }
+        }
       }).catch(err=>{ console.error(err) }).finally(()=>setLoading(false))
-  },[])
+  },[page, limit])
 
   async function updateStatus(orderId, newStatus){
     const token = localStorage.getItem('sb_token')
@@ -76,6 +82,9 @@ export default function AdminDashboard(){
       const toNotify = orders.filter(o=> selected.includes(o.id))
       toNotify.forEach(o=> notifyWhatsApp(o))
     }
+
+  function gotoPrev(){ if(page>1) setPage(p=>p-1); setSelected([]) }
+  function gotoNext(){ if(page<totalPages) setPage(p=>p+1); setSelected([]) }
 
   return (
     <div>
@@ -160,6 +169,20 @@ export default function AdminDashboard(){
               </div>
             ))}
           </div>
+            <div className="flex items-center justify-between mt-4">
+              <div>
+                <button onClick={gotoPrev} disabled={page<=1} className="px-3 py-1 border rounded mr-2">Anterior</button>
+                <button onClick={gotoNext} disabled={page>=totalPages} className="px-3 py-1 border rounded">Próxima</button>
+              </div>
+              <div className="text-sm">Página {page} de {totalPages}</div>
+              <div>
+                <select value={limit} onChange={(e)=>{ setLimit(Number(e.target.value)); setPage(1); }} className="p-1 border rounded">
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                </select>
+              </div>
+            </div>
         )}
       </main>
     </div>
