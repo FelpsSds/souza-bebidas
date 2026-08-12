@@ -7,6 +7,7 @@ export default function AdminDashboard(){
   const [statusFilter, setStatusFilter] = useState('')
   const [selected, setSelected] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery)
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
@@ -22,7 +23,7 @@ export default function AdminDashboard(){
     params.set('page', String(page))
     params.set('limit', String(limit))
     if(statusFilter) params.set('status', statusFilter)
-    if(searchQuery && String(searchQuery).trim()) params.set('q', String(searchQuery).trim())
+    if(debouncedQuery && String(debouncedQuery).trim()) params.set('q', String(debouncedQuery).trim())
 
     fetch(`${API_BASE}/api/orders?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r=>{
@@ -34,7 +35,16 @@ export default function AdminDashboard(){
           if(js.meta){ setTotalPages(js.meta.totalPages || 1) }
         }
       }).catch(err=>{ console.error(err) }).finally(()=>setLoading(false))
-  },[page, limit])
+  },[page, limit, debouncedQuery, statusFilter])
+
+  // debounce da query de busca (500ms)
+  useEffect(()=>{
+    const t = setTimeout(()=>{ setDebouncedQuery(searchQuery); setPage(1) }, 500)
+    return ()=> clearTimeout(t)
+  },[searchQuery])
+
+  // quando troca o filtro de status, volta para a página 1
+  useEffect(()=>{ setPage(1) }, [statusFilter])
 
   async function updateStatus(orderId, newStatus){
     const token = localStorage.getItem('sb_token')
