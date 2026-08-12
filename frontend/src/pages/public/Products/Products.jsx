@@ -12,9 +12,13 @@ export default function Products(){
   useEffect(()=>{
     setLoading(true)
     fetch(`${API_BASE}/api/products`).then(r=>r.json()).then(js=>{
-      if(js && js.ok && Array.isArray(js.data)){
+        if(js && js.ok && Array.isArray(js.data)){
         // map to the frontend shape if needed
-        const mapped = js.data.map(p=>({ id: p.id, name: p.name, description: p.description, price: p.price, stock: p.stock, image: (p.images && p.images[0]) || '/images/products/default.png' }))
+        const mapped = js.data.map(p=>{
+          let img = (p.images && p.images[0]) || '/images/products/default.png'
+          if (img && img.startsWith('/uploads')) img = `${API_BASE}${img}`
+          return { id: p.id, name: p.name, description: p.description, price: p.price, stock: p.stock, image: img }
+        })
         setProducts(mapped)
       }
     }).catch(err=>{

@@ -66,11 +66,18 @@ export default function AdminProducts(){
 
         {loading ? <div>Carregando...</div> : (
           <div className="grid grid-cols-1 gap-3">
-            {products.map(p=> (
+            {products.map(p=> {
+              const rawImg = (p.images && p.images[0]) || ''
+              let thumb = rawImg
+              if (rawImg && rawImg.startsWith('/uploads')) thumb = `${API_BASE}${rawImg}`
+              return (
               <div key={p.id} className="p-3 bg-white rounded shadow flex justify-between items-center">
-                <div>
-                  <div className="font-semibold">{p.name}</div>
-                  <div className="text-sm text-gray-600">R$ {p.price}</div>
+                <div className="flex items-center gap-3">
+                  <img src={thumb || '/images/products/default.png'} alt={p.name} className="w-16 h-16 object-cover rounded" />
+                  <div>
+                    <div className="font-semibold">{p.name}</div>
+                    <div className="text-sm text-gray-600">R$ {p.price}</div>
+                  </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={()=>openEdit(p)} className="px-3 py-1 border rounded">Editar</button>
