@@ -10,6 +10,8 @@ export default function Cart(){
   const [phoneDigits, setPhoneDigits] = useState('')
   const [delivery, setDelivery] = useState('entrega')
   const [address, setAddress] = useState('')
+  const [sending, setSending] = useState(false)
+  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
 
   function onlyDigits(s){ return (s || '').replace(/\D/g,'') }
   function formatPhoneBR(d){
@@ -30,19 +32,71 @@ export default function Cart(){
 
   function sendWhatsApp(){
     if (!isValidPhone(phoneDigits)) return alert('Informe um telefone válido (10 ou 11 dígitos)')
-    let lines = []
-    lines.push('Olá! Gostaria de fazer um pedido na Souza Bebidas.')
-    lines.push('')
-    items.forEach(i => lines.push(`• ${i.quantity}x ${i.name} - R$ ${ (i.price * i.quantity).toFixed(2) }`))
-    lines.push('')
-    lines.push(`Total: R$ ${total.toFixed(2)}`)
-    lines.push(`Recebimento: ${delivery}`)
-    if (delivery === 'entrega') lines.push(`Endereço: ${address}`)
-    if (name) lines.push(`Cliente: ${name}`)
-    if (phoneDigits) lines.push(`Telefone: ${formatPhoneBR(phoneDigits)}`)
 
-    const text = encodeURIComponent(lines.join('\n'))
-    window.open(`https://wa.me/?text=${text}`, '_blank')
+    const payload = {
+      items: items.map(i=>({ productId: i.id, price: i.price, quantity: i.quantity })),
+      phone: phoneDigits,
+      name,
+      address,
+      deliveryType: delivery,
+      notes: ''
+    }
+
+    setSending(true)
+    fetch(`${API_BASE}/api/orders`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    }).then(r=>r.json()).then(data => {
+      setSending(false)
+      if (data && data.ok) {
+        // sucesso: limpar carrinho e abrir whatsapp para confirmação
+        clearCart()
+        const lines = []
+        lines.push('Pedido registrado. ID: ' + (data.orderId || ''))
+        lines.push('')
+        items.forEach(i => lines.push(`• ${i.quantity}x ${i.name} - R$ ${ (i.price * i.quantity).toFixed(2) }`))
+        lines.push('')
+        lines.push(`Total: R$ ${total.toFixed(2)}`)
+        lines.push(`Recebimento: ${delivery}`)
+        if (delivery === 'entrega') lines.push(`Endereço: ${address}`)
+        if (name) lines.push(`Cliente: ${name}`)
+        if (phoneDigits) lines.push(`Telefone: ${formatPhoneBR(phoneDigits)}`)
+
+        const text = encodeURIComponent(lines.join('\n'))
+        window.open(`https://wa.me/?text=${text}`, '_blank')
+        alert('Pedido registrado com sucesso.')
+      } else {
+        alert('Não foi possível registrar o pedido no servidor. Tentando apenas WhatsApp.')
+        // fallback: abrir whatsapp mesmo
+        const lines = []
+        lines.push('Olá! Gostaria de fazer um pedido na Souza Bebidas.')
+        lines.push('')
+        items.forEach(i => lines.push(`• ${i.quantity}x ${i.name} - R$ ${ (i.price * i.quantity).toFixed(2) }`))
+        lines.push('')
+        lines.push(`Total: R$ ${total.toFixed(2)}`)
+        lines.push(`Recebimento: ${delivery}`)
+        if (delivery === 'entrega') lines.push(`Endereço: ${address}`)
+        if (name) lines.push(`Cliente: ${name}`)
+        if (phoneDigits) lines.push(`Telefone: ${formatPhoneBR(phoneDigits)}`)
+        const text = encodeURIComponent(lines.join('\n'))
+        window.open(`https://wa.me/?text=${text}`, '_blank')
+      }
+    }).catch(err=>{
+      console.error(err)
+      setSending(false)
+      alert('Erro de rede. Tentando apenas WhatsApp.')
+      const lines = []
+      lines.push('Olá! Gostaria de fazer um pedido na Souza Bebidas.')
+      lines.push('')
+      items.forEach(i => lines.push(`• ${i.quantity}x ${i.name} - R$ ${ (i.price * i.quantity).toFixed(2) }`))
+      lines.push('')
+      lines.push(`Total: R$ ${total.toFixed(2)}`)
+      lines.push(`Recebimento: ${delivery}`)
+      if (delivery === 'entrega') lines.push(`Endereço: ${address}`)
+      if (name) lines.push(`Cliente: ${name}`)
+      if (phoneDigits) lines.push(`Telefone: ${formatPhoneBR(phoneDigits)}`)
+      const text = encodeURIComponent(lines.join('\n'))
+      window.open(`https://wa.me/?text=${text}`, '_blank')
+    })
   }
 
   return (
