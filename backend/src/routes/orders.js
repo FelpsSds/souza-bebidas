@@ -75,4 +75,22 @@ router.patch('/:id', verifyToken, async (req, res) => {
   }
 })
 
+// Atualizar status em lote: { ids: [1,2,3], status: 'enviado' }
+router.patch('/', verifyToken, async (req, res) => {
+  try {
+    const { ids, status } = req.body
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return res.status(400).json({ error: 'ids required' })
+    if (!status) return res.status(400).json({ error: 'status required' })
+
+    const updated = await prisma.$transaction(
+      ids.map(id => prisma.order.update({ where: { id: Number(id) }, data: { status } }))
+    )
+
+    res.json({ ok: true, data: updated })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'internal_error' })
+  }
+})
+
 module.exports = router
