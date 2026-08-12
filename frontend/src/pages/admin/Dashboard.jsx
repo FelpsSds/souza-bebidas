@@ -8,6 +8,8 @@ export default function AdminDashboard(){
   const [selected, setSelected] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery)
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
@@ -24,6 +26,8 @@ export default function AdminDashboard(){
     params.set('limit', String(limit))
     if(statusFilter) params.set('status', statusFilter)
     if(debouncedQuery && String(debouncedQuery).trim()) params.set('q', String(debouncedQuery).trim())
+    if(fromDate) params.set('from', fromDate)
+    if(toDate) params.set('to', toDate)
 
     fetch(`${API_BASE}/api/orders?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r=>{
@@ -127,6 +131,12 @@ export default function AdminDashboard(){
                 <option value="entregue">entregue</option>
                 <option value="cancelado">cancelado</option>
               </select>
+              <div className="flex items-center gap-1">
+                <label className="text-sm">De:</label>
+                <input type="date" value={fromDate} onChange={(e)=>{ setFromDate(e.target.value); setPage(1) }} className="p-1 border rounded" disabled={loading} />
+                <label className="text-sm ml-2">Até:</label>
+                <input type="date" value={toDate} onChange={(e)=>{ setToDate(e.target.value); setPage(1) }} className="p-1 border rounded" disabled={loading} />
+              </div>
               <div className="flex items-center gap-2">
                 <select id="batchStatus" className="p-2 border rounded">
                   <option value="preparando">preparando</option>

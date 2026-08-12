@@ -61,6 +61,8 @@ router.get('/', verifyToken, async (req, res) => {
     // busca: ?q=texto (por id, telefone ou nome do cliente)
     const qRaw = typeof req.query.q === 'string' ? req.query.q.trim() : ''
     const statusFilter = typeof req.query.status === 'string' && req.query.status ? req.query.status : null
+    const fromRaw = typeof req.query.from === 'string' && req.query.from ? req.query.from : null
+    const toRaw = typeof req.query.to === 'string' && req.query.to ? req.query.to : null
 
     const where = {}
     if (statusFilter) where.status = statusFilter
@@ -75,6 +77,20 @@ router.get('/', verifyToken, async (req, res) => {
       orClauses.push({ customer: { is: { name: { contains: qRaw, mode: 'insensitive' } } } })
     }
     if (orClauses.length) where.OR = orClauses
+
+    // filtro por intervalo de datas (createdAt)
+    if (fromRaw || toRaw) {
+      const createdAt = {}
+      if (fromRaw) {
+        const d = new Date(fromRaw)
+        if (!isNaN(d)) createdAt.gte = d
+      }
+      if (toRaw) {
+        const d2 = new Date(toRaw)
+        if (!isNaN(d2)) createdAt.lte = d2
+      }
+      if (Object.keys(createdAt).length) where.createdAt = createdAt
+    }
 
     const [total, orders] = await prisma.$transaction([
       prisma.order.count({ where }),
