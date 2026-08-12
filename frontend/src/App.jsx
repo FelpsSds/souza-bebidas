@@ -1,10 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Home from './pages/public/Home/Home'
-
-function Products(){
-  return (<div className="p-6"><h1>Produtos</h1></div>)
-}
+import Products from './pages/public/Products/Products'
 
 function Cart(){
   return (<div className="p-6"><h1>Carrinho</h1></div>)
