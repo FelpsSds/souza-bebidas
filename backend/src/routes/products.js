@@ -19,7 +19,11 @@ router.get('/', async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     const { name, slug, description, price, stock, images, categoryId } = req.body
-    const p = await prisma.product.create({ data: { name, slug, description, price: Number(price), stock: Number(stock) || 0, images: images || [], categoryId: categoryId || null } })
+    const pPrice = Number(price)
+    const pStock = Number(stock)
+    if (isNaN(pPrice) || pPrice < 0) return res.status(400).json({ error: 'invalid_price' })
+    if (isNaN(pStock) || pStock < 0) return res.status(400).json({ error: 'invalid_stock' })
+    const p = await prisma.product.create({ data: { name, slug, description, price: pPrice, stock: pStock || 0, images: images || [], categoryId: categoryId || null } })
     res.json({ ok: true, data: p })
   } catch (err) {
     console.error(err)
@@ -32,7 +36,11 @@ router.put('/:id', verifyToken, async (req, res) => {
   try {
     const id = Number(req.params.id)
     const { name, slug, description, price, stock, images, categoryId } = req.body
-    const p = await prisma.product.update({ where: { id }, data: { name, slug, description, price: Number(price), stock: Number(stock), images: images || [], categoryId: categoryId || null } })
+    const pPrice = Number(price)
+    const pStock = Number(stock)
+    if (isNaN(pPrice) || pPrice < 0) return res.status(400).json({ error: 'invalid_price' })
+    if (isNaN(pStock) || pStock < 0) return res.status(400).json({ error: 'invalid_stock' })
+    const p = await prisma.product.update({ where: { id }, data: { name, slug, description, price: pPrice, stock: pStock, images: images || [], categoryId: categoryId || null } })
     res.json({ ok: true, data: p })
   } catch (err) {
     console.error(err)

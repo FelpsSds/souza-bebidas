@@ -8,6 +8,7 @@ export default function AdminProducts(){
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: '', slug: '', description: '', price: '', stock: '', images: [] })
+  const [errors, setErrors] = useState({})
   const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
   const navigate = useNavigate()
 
@@ -24,6 +25,16 @@ export default function AdminProducts(){
 
   function handleChange(e){ const { name, value } = e.target; setForm(prev=>({ ...prev, [name]: value })) }
 
+  function validateForm(){
+    const errs = {}
+    const p = Number(form.price)
+    const s = Number(form.stock)
+    if (isNaN(p) || p < 0) errs.price = 'Preço inválido'
+    if (!Number.isInteger(s) || s < 0) errs.stock = 'Estoque inválido'
+    setErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   function removeImageAt(i){ setForm(prev=>({ ...prev, images: prev.images.filter((_,idx)=>idx!==i) })) }
   function moveImage(i, dir){ setForm(prev=>{
     const arr = [...prev.images]
@@ -38,6 +49,7 @@ export default function AdminProducts(){
   async function save(){
     const token = getToken()
     if(!token) { localStorage.removeItem('sb_token'); navigate('/admin/login'); return }
+    if(!validateForm()) return alert('Corrija os erros no formulário')
     const payload = { name: form.name, slug: form.slug, description: form.description, price: Number(form.price), stock: Number(form.stock), images: Array.isArray(form.images) ? form.images : (form.images ? String(form.images).split(',').map(s=>s.trim()) : []) }
     try{
       const url = editing ? `${API_BASE}/api/products/${editing.id}` : `${API_BASE}/api/products`
@@ -105,7 +117,9 @@ export default function AdminProducts(){
                 <input name="name" value={form.name} onChange={handleChange} placeholder="Nome" className="p-2 border rounded" />
                 <input name="slug" value={form.slug} onChange={handleChange} placeholder="Slug" className="p-2 border rounded" />
                 <input name="price" value={form.price} onChange={handleChange} placeholder="Preço" className="p-2 border rounded" />
+                {errors.price && <div className="text-sm text-red-500">{errors.price}</div>}
                 <input name="stock" value={form.stock} onChange={handleChange} placeholder="Estoque" className="p-2 border rounded" />
+                {errors.stock && <div className="text-sm text-red-500">{errors.stock}</div>}
                 <div className="col-span-2">
                   <div className="flex flex-wrap gap-2 mb-2">
                     {form.images && form.images.length > 0 ? form.images.map((img,idx)=>{

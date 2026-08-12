@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 
+const money = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0))
+
 export default function ProductCard({product, onAdd}){
   const [open, setOpen] = useState(false)
   const imgs = (product.images && product.images.length) ? product.images : (product.image ? [product.image] : [])
@@ -18,7 +20,7 @@ export default function ProductCard({product, onAdd}){
         <p className="text-sm text-gray-600 mt-1">{product.description}</p>
       </div>
       <div className="mt-3 flex items-center justify-between">
-        <div className="text-lg font-bold">R$ {Number(product.price).toFixed(2)}</div>
+        <div className="text-lg font-bold">{money(product.price)}</div>
         <button onClick={() => onAdd && onAdd(product)} className="px-3 py-1 bg-[#1F6B45] text-white rounded">Adicionar</button>
       </div>
 
