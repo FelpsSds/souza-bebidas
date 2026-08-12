@@ -63,6 +63,8 @@ router.get('/', verifyToken, async (req, res) => {
     const statusFilter = typeof req.query.status === 'string' && req.query.status ? req.query.status : null
     const fromRaw = typeof req.query.from === 'string' && req.query.from ? req.query.from : null
     const toRaw = typeof req.query.to === 'string' && req.query.to ? req.query.to : null
+    const minTotalRaw = typeof req.query.minTotal === 'string' && req.query.minTotal ? req.query.minTotal : null
+    const maxTotalRaw = typeof req.query.maxTotal === 'string' && req.query.maxTotal ? req.query.maxTotal : null
 
     const where = {}
     if (statusFilter) where.status = statusFilter
@@ -90,6 +92,20 @@ router.get('/', verifyToken, async (req, res) => {
         if (!isNaN(d2)) createdAt.lte = d2
       }
       if (Object.keys(createdAt).length) where.createdAt = createdAt
+    }
+
+    // filtro por total (min/max)
+    if (minTotalRaw || maxTotalRaw) {
+      const total = {}
+      if (minTotalRaw) {
+        const m = Number(minTotalRaw)
+        if (!isNaN(m)) total.gte = m
+      }
+      if (maxTotalRaw) {
+        const M = Number(maxTotalRaw)
+        if (!isNaN(M)) total.lte = M
+      }
+      if (Object.keys(total).length) where.total = total
     }
 
     const [total, orders] = await prisma.$transaction([
@@ -138,3 +154,74 @@ router.patch('/', verifyToken, async (req, res) => {
 })
 
 module.exports = router
+
+// Exportar pedidos filtrados como CSV
+router.get('/export', verifyToken, async (req, res) => {
+  try {
+    // reuse same filters as list
+    const qRaw = typeof req.query.q === 'string' ? req.query.q.trim() : ''
+    const statusFilter = typeof req.query.status === 'string' && req.query.status ? req.query.status : null
+    const fromRaw = typeof req.query.from === 'string' && req.query.from ? req.query.from : null
+    const toRaw = typeof req.query.to === 'string' && req.query.to ? req.query.to : null
+    const minTotalRaw = typeof req.query.minTotal === 'string' && req.query.minTotal ? req.query.minTotal : null
+    const maxTotalRaw = typeof req.query.maxTotal === 'string' && req.query.maxTotal ? req.query.maxTotal : null
+
+    const where = {}
+    if (statusFilter) where.status = statusFilter
+
+    const orClauses = []
+    if (qRaw) {
+      if (/^\d+$/.test(qRaw)) orClauses.push({ id: Number(qRaw) })
+      orClauses.push({ phone: { contains: qRaw } })
+      orClauses.push({ customer: { is: { name: { contains: qRaw, mode: 'insensitive' } } } })
+    }
+    if (orClauses.length) where.OR = orClauses
+
+    if (fromRaw || toRaw) {
+      const createdAt = {}
+      if (fromRaw) {
+        const d = new Date(fromRaw)
+        if (!isNaN(d)) createdAt.gte = d
+      }
+      if (toRaw) {
+        const d2 = new Date(toRaw)
+        if (!isNaN(d2)) createdAt.lte = d2
+      }
+      if (Object.keys(createdAt).length) where.createdAt = createdAt
+    }
+
+    if (minTotalRaw || maxTotalRaw) {
+      const total = {}
+      if (minTotalRaw) {
+        const m = Number(minTotalRaw)
+        if (!isNaN(m)) total.gte = m
+      }
+      if (maxTotalRaw) {
+        const M = Number(maxTotalRaw)
+        if (!isNaN(M)) total.lte = M
+      }
+      if (Object.keys(total).length) where.total = total
+    }
+
+    const orders = await prisma.order.findMany({ where, include: { items: true, customer: true }, orderBy: { createdAt: 'desc' } })
+
+    // montar CSV
+    const rows = []
+    rows.push(['id','cliente','telefone','total','status','createdAt','itens'].join(','))
+    for (const o of orders) {
+      const items = (o.items||[]).map(i => `${i.quantity}x${i.productId}@${i.price}`).join(';')
+      const cliente = o.customer ? (o.customer.name || '') : ''
+      const phone = o.phone || ''
+      const line = [o.id, `"${cliente.replace(/"/g,'""')}"`, `"${phone}"`, o.total, o.status, o.createdAt.toISOString(), `"${items.replace(/"/g,'""')}"`].join(',')
+      rows.push(line)
+    }
+
+    const csv = rows.join('\n')
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', 'attachment; filename="orders.csv"')
+    res.send(csv)
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'internal_error' })
+  }
+})

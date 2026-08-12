@@ -10,6 +10,8 @@ export default function AdminDashboard(){
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery)
   const [fromDate, setFromDate] = useState('')
   const [toDate, setToDate] = useState('')
+  const [minTotal, setMinTotal] = useState('')
+  const [maxTotal, setMaxTotal] = useState('')
   const [loading, setLoading] = useState(false)
   const [page, setPage] = useState(1)
   const [limit, setLimit] = useState(10)
@@ -28,6 +30,8 @@ export default function AdminDashboard(){
     if(debouncedQuery && String(debouncedQuery).trim()) params.set('q', String(debouncedQuery).trim())
     if(fromDate) params.set('from', fromDate)
     if(toDate) params.set('to', toDate)
+    if(minTotal) params.set('minTotal', String(minTotal))
+    if(maxTotal) params.set('maxTotal', String(maxTotal))
 
     fetch(`${API_BASE}/api/orders?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r=>{
@@ -137,6 +141,12 @@ export default function AdminDashboard(){
                 <label className="text-sm ml-2">Até:</label>
                 <input type="date" value={toDate} onChange={(e)=>{ setToDate(e.target.value); setPage(1) }} className="p-1 border rounded" disabled={loading} />
               </div>
+              <div className="flex items-center gap-1 ml-3">
+                <label className="text-sm">Min R$</label>
+                <input type="number" step="0.01" min="0" value={minTotal} onChange={(e)=>{ setMinTotal(e.target.value); setPage(1) }} className="p-1 border rounded w-24" disabled={loading} />
+                <label className="text-sm ml-2">Max R$</label>
+                <input type="number" step="0.01" min="0" value={maxTotal} onChange={(e)=>{ setMaxTotal(e.target.value); setPage(1) }} className="p-1 border rounded w-24" disabled={loading} />
+              </div>
               <div className="flex items-center gap-2">
                 <select id="batchStatus" className="p-2 border rounded">
                   <option value="preparando">preparando</option>
@@ -146,6 +156,30 @@ export default function AdminDashboard(){
                 </select>
                 <button onClick={()=>updateBatchStatus(document.getElementById('batchStatus').value)} className="px-3 py-2 bg-[#1F6B45] text-white rounded" disabled={loading}>Atualizar selecionados</button>
                 <button onClick={notifySelected} className="px-3 py-2 border rounded" disabled={loading}>Notificar selecionados (WhatsApp)</button>
+                <button onClick={async ()=>{
+                  const token = localStorage.getItem('sb_token')
+                  if(!token) { localStorage.removeItem('sb_token'); navigate('/admin/login'); return }
+                  try{
+                    const params = new URLSearchParams()
+                    if(debouncedQuery) params.set('q', debouncedQuery)
+                    if(statusFilter) params.set('status', statusFilter)
+                    if(fromDate) params.set('from', fromDate)
+                    if(toDate) params.set('to', toDate)
+                    if(minTotal) params.set('minTotal', String(minTotal))
+                    if(maxTotal) params.set('maxTotal', String(maxTotal))
+                    const res = await fetch(`${API_BASE}/api/orders/export?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
+                    if(res.status === 401){ localStorage.removeItem('sb_token'); navigate('/admin/login'); return }
+                    const blob = await res.blob()
+                    const url = window.URL.createObjectURL(blob)
+                    const a = document.createElement('a')
+                    a.href = url
+                    a.download = 'pedidos.csv'
+                    document.body.appendChild(a)
+                    a.click()
+                    a.remove()
+                    window.URL.revokeObjectURL(url)
+                  }catch(err){ console.error(err); alert('Erro ao exportar CSV') }
+                }} className="px-3 py-2 border rounded" disabled={loading}>Exportar CSV</button>
               </div>
             </div>
 
