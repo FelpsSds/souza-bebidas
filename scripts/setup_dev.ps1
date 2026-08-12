@@ -47,12 +47,12 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
         $db   = $matches['db']
 
         if (Get-Command psql -ErrorAction SilentlyContinue) {
-          Write-Info "Tentando criar banco '$db' em $host:$port usando psql (usuário: $user)..."
+          Write-Info ("Tentando criar banco '{0}' em {1}:{2} usando psql (usuário: {3})..." -f $db, $host, $port, $user)
           $env:PGPASSWORD = $pass
           # conectar ao banco 'postgres' e criar o banco destino
-          $createCmd = "CREATE DATABASE \"$db\";"
+          $createCmd = ("CREATE DATABASE \"" + $db + "\";")
           & psql -h $host -p $port -U $user -d postgres -c $createCmd
-          if ($LASTEXITCODE -eq 0) { Write-Info "Banco '$db' criado (ou já existia)." } else { Write-Err "Falha ao criar banco via psql. Verifique credenciais/privilegios." }
+          if ($LASTEXITCODE -eq 0) { Write-Info ("Banco '{0}' criado (ou já existia)." -f $db) } else { Write-Err "Falha ao criar banco via psql. Verifique credenciais/privilegios." }
           Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
         } else {
           Write-Err "Comando 'psql' não encontrado. Instale o cliente psql (Postgres) ou instale o Docker e reexecute o script.";
