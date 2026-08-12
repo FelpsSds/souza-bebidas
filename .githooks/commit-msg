@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+const { spawnSync } = require('child_process')
+const path = require('path')
+const file = process.argv[2]
+if(!file) process.exit(0)
+const script = path.join(process.cwd(), 'scripts', 'commit-msg-translate.js')
+spawnSync('node', [script, file], { stdio: 'inherit' })
+process.exit(0)
