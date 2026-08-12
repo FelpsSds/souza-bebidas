@@ -14,4 +14,7 @@ app.get('/api/ping',(req,res)=>{
 const ordersRouter = require('./routes/orders')
 app.use('/api/orders', ordersRouter)
 
+const productsRouter = require('./routes/products')
+app.use('/api/products', productsRouter)
+
 module.exports = app
