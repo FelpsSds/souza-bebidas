@@ -7,7 +7,7 @@ export default function AdminProducts(){
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({ name: '', slug: '', description: '', price: '', stock: '', images: '' })
+  const [form, setForm] = useState({ name: '', slug: '', description: '', price: '', stock: '', images: [] })
   const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
   const navigate = useNavigate()
 
@@ -18,18 +18,27 @@ export default function AdminProducts(){
 
   useEffect(()=>{ fetchProducts() }, [])
 
-  function openCreate(){ setEditing(null); setForm({ name:'', slug:'', description:'', price:'', stock:'', images:''}); setShowForm(true) }
+  function openCreate(){ setEditing(null); setForm({ name:'', slug:'', description:'', price:'', stock:'', images:[]}); setShowForm(true) }
 
-  function openEdit(p){ setEditing(p); setForm({ name: p.name||'', slug: p.slug||'', description: p.description||'', price: p.price||'', stock: p.stock||0, images: (p.images && p.images.join(',')) || '' }); setShowForm(true) }
+  function openEdit(p){ setEditing(p); setForm({ name: p.name||'', slug: p.slug||'', description: p.description||'', price: p.price||'', stock: p.stock||0, images: p.images || [] }); setShowForm(true) }
 
-  function handleChange(e){ setForm(prev=>({ ...prev, [e.target.name]: e.target.value })) }
+  function handleChange(e){ const { name, value } = e.target; setForm(prev=>({ ...prev, [name]: value })) }
+
+  function removeImageAt(i){ setForm(prev=>({ ...prev, images: prev.images.filter((_,idx)=>idx!==i) })) }
+  function moveImage(i, dir){ setForm(prev=>{
+    const arr = [...prev.images]
+    const j = i + dir
+    if(j<0 || j>=arr.length) return prev
+    const tmp = arr[j]; arr[j] = arr[i]; arr[i] = tmp
+    return { ...prev, images: arr }
+  }) }
 
   function getToken(){ return localStorage.getItem('sb_token') }
 
   async function save(){
     const token = getToken()
     if(!token) { localStorage.removeItem('sb_token'); navigate('/admin/login'); return }
-    const payload = { name: form.name, slug: form.slug, description: form.description, price: Number(form.price), stock: Number(form.stock), images: form.images ? form.images.split(',').map(s=>s.trim()) : [] }
+    const payload = { name: form.name, slug: form.slug, description: form.description, price: Number(form.price), stock: Number(form.stock), images: Array.isArray(form.images) ? form.images : (form.images ? String(form.images).split(',').map(s=>s.trim()) : []) }
     try{
       const url = editing ? `${API_BASE}/api/products/${editing.id}` : `${API_BASE}/api/products`
       const method = editing ? 'PUT' : 'POST'
@@ -97,27 +106,42 @@ export default function AdminProducts(){
                 <input name="slug" value={form.slug} onChange={handleChange} placeholder="Slug" className="p-2 border rounded" />
                 <input name="price" value={form.price} onChange={handleChange} placeholder="Preço" className="p-2 border rounded" />
                 <input name="stock" value={form.stock} onChange={handleChange} placeholder="Estoque" className="p-2 border rounded" />
-                <input name="images" value={form.images} onChange={handleChange} placeholder="Imagens (separadas por ,)" className="p-2 border rounded col-span-2" />
-                <div className="col-span-2 flex items-center gap-2">
-                  <input type="file" id="fileUpload" className="" />
-                  <button onClick={async ()=>{
-                    const fileInput = document.getElementById('fileUpload')
-                    if(!fileInput || !fileInput.files || fileInput.files.length===0) return alert('Selecione um arquivo')
-                    const fd = new FormData(); fd.append('file', fileInput.files[0])
-                    const token = localStorage.getItem('sb_token')
-                    try{
-                      const resp = await fetch(`${API_BASE}/api/uploads`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
-                      const js = await resp.json()
-                      if(resp.status === 401){ localStorage.removeItem('sb_token'); navigate('/admin/login'); return }
-                      if(js && js.ok && js.url){
-                        const full = `${API_BASE}${js.url}`
-                        const imgs = form.images ? form.images + ',' + full : full
-                        setForm(prev=>({ ...prev, images: imgs }))
-                        fileInput.value = ''
-                        alert('Upload realizado')
-                      } else { alert('Upload falhou') }
-                    }catch(err){ console.error(err); alert('Erro no upload') }
-                  }} className="px-3 py-1 border rounded">Upload imagem</button>
+                <div className="col-span-2">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {form.images && form.images.length > 0 ? form.images.map((img,idx)=>{
+                      const src = img && img.startsWith('/uploads') ? `${API_BASE}${img}` : img
+                      return (
+                        <div key={idx} className="relative">
+                          <img src={src} alt={`img-${idx}`} className="w-20 h-20 object-cover rounded" />
+                          <div className="absolute top-0 right-0 flex flex-col">
+                            <button onClick={()=>moveImage(idx, -1)} className="bg-white/80 p-1 text-sm">◀</button>
+                            <button onClick={()=>removeImageAt(idx)} className="bg-white/80 p-1 text-sm text-red-600">✕</button>
+                            <button onClick={()=>moveImage(idx, +1)} className="bg-white/80 p-1 text-sm">▶</button>
+                          </div>
+                        </div>
+                      )
+                    }) : <div className="text-sm text-gray-500">Nenhuma imagem</div>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="file" id="fileUpload" className="" />
+                    <button onClick={async ()=>{
+                      const fileInput = document.getElementById('fileUpload')
+                      if(!fileInput || !fileInput.files || fileInput.files.length===0) return alert('Selecione um arquivo')
+                      const fd = new FormData(); fd.append('file', fileInput.files[0])
+                      const token = localStorage.getItem('sb_token')
+                      try{
+                        const resp = await fetch(`${API_BASE}/api/uploads`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+                        const js = await resp.json()
+                        if(resp.status === 401){ localStorage.removeItem('sb_token'); navigate('/admin/login'); return }
+                        if(js && js.ok && js.url){
+                          const full = `${API_BASE}${js.url}`
+                          setForm(prev=>({ ...prev, images: [...(prev.images||[]), full] }))
+                          fileInput.value = ''
+                          alert('Upload realizado')
+                        } else { alert('Upload falhou') }
+                      }catch(err){ console.error(err); alert('Erro no upload') }
+                    }} className="px-3 py-1 border rounded">Upload imagem</button>
+                  </div>
                 </div>
                 <textarea name="description" value={form.description} onChange={handleChange} placeholder="Descrição" className="p-2 border rounded col-span-2" />
               </div>
