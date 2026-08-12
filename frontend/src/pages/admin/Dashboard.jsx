@@ -6,6 +6,7 @@ export default function AdminDashboard(){
   const [orders, setOrders] = useState([])
   const [statusFilter, setStatusFilter] = useState('')
   const [selected, setSelected] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
@@ -84,6 +85,7 @@ export default function AdminDashboard(){
         {loading ? <div>Carregando pedidos...</div> : (
           <div>
             <div className="flex items-center gap-2 mb-4">
+              <input value={searchQuery} onChange={(e)=>setSearchQuery(e.target.value)} placeholder="Pesquisar por ID, telefone ou nome" className="p-2 border rounded w-80" />
               <select value={statusFilter} onChange={(e)=>setStatusFilter(e.target.value)} className="p-2 border rounded">
                 <option value="">Todos os status</option>
                 <option value="novo">novo</option>
@@ -105,7 +107,22 @@ export default function AdminDashboard(){
             </div>
 
             <div className="space-y-4">
-            {orders.filter(o=> !statusFilter || o.status === statusFilter).map(o=> (
+            {orders.filter(o=>{
+              if(statusFilter && o.status !== statusFilter) return false
+              const q = String(searchQuery || '').trim()
+              if(!q) return true
+              if(/^\d+$/.test(q)){
+                if(String(o.id) === q) return true
+                if((o.phone||'').includes(q)) return true
+                if((o.customer && o.customer.phone || '').includes(q)) return true
+                return false
+              }
+              const ql = q.toLowerCase()
+              if((o.customer && o.customer.name || '').toLowerCase().includes(ql)) return true
+              if((o.phone||'').toLowerCase().includes(ql)) return true
+              if(String(o.id).includes(ql)) return true
+              return false
+            }).map(o=> (
               <div key={o.id} className="p-4 bg-white rounded shadow">
                 <div className="flex justify-between items-start gap-4">
                   <div className="mr-3">
