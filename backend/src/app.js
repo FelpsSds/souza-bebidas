@@ -17,4 +17,7 @@ app.use('/api/orders', ordersRouter)
 const productsRouter = require('./routes/products')
 app.use('/api/products', productsRouter)
 
+const authRouter = require('./routes/auth')
+app.use('/api/auth', authRouter)
+
 module.exports = app

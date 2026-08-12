@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
+const bcrypt = require('bcryptjs')
 
 async function main(){
   // categories
@@ -30,6 +31,14 @@ async function main(){
       create: p
     })
   }
+
+  // admin user
+  const adminPassword = await bcrypt.hash('admin123', 10)
+  await prisma.user.upsert({
+    where: { email: 'admin@local' },
+    update: { name: 'Admin' },
+    create: { name: 'Admin', email: 'admin@local', password: adminPassword, role: 'admin' }
+  })
 
   console.log('Seed completed')
 }

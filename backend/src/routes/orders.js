@@ -49,8 +49,9 @@ router.post('/', async (req, res) => {
   }
 })
 
-// List orders (basic)
-router.get('/', async (req, res) => {
+// List orders (basic) - protected
+const { verifyToken } = require('../middleware/auth')
+router.get('/', verifyToken, async (req, res) => {
   try {
     const orders = await prisma.order.findMany({ include: { items: true, customer: true }, orderBy: { createdAt: 'desc' } })
     res.json({ ok: true, data: orders })
