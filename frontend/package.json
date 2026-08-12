@@ -1,0 +1,20 @@
+{
+  "name": "souza-bebidas-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "18.x",
+    "react-dom": "18.x",
+    "react-router-dom": "6.x",
+    "axios": "^1.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^3.0.0"
+  }
+}
