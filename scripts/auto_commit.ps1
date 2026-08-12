@@ -1,6 +1,5 @@
 param(
   [int]$IntervalSeconds = 5,
-  [string]$MessagePrefix = "auto:",
   [switch]$Push,
   [string[]]$Exclude = @('.env','*.log','node_modules/*')
 )
@@ -23,8 +22,54 @@ while ($true) {
     }
 
     if ($pathsToStage.Count -gt 0) {
-      $now = Get-Date -Format "yyyy-MM-dd_HH:mm:ss"
-      $msg = "$MessagePrefix $now"
+      # Detect commit type and scope based on changed paths
+      function Get-TypeAndScope($paths) {
+        $counts = @{}
+        $scopes = @{}
+        foreach ($p in $paths) {
+          $lower = $p.ToLower()
+          if ($lower -like 'frontend/*' -or $lower -like 'src/*' -or $lower -like '*.jsx' -or $lower -like '*.css') {
+            $key = 'feat'
+            $scope = 'frontend'
+          } elseif ($lower -like 'backend/*' -or $lower -like 'server.js' -or $lower -like 'prisma/*' -or $lower -like '*.js') {
+            $key = 'feat'
+            $scope = 'backend'
+          } elseif ($lower -like 'scripts/*' -or $lower -like '*.ps1') {
+            $key = 'chore'
+            $scope = 'scripts'
+          } elseif ($lower -like 'readme*' -or $lower -like 'docs/*') {
+            $key = 'docs'
+            $scope = 'docs'
+          } elseif ($lower -like 'package.json' -or $lower -like 'package-lock.json' -or $lower -like 'yarn.lock') {
+            $key = 'chore'
+            $scope = 'deps'
+          } else {
+            $key = 'chore'
+            $scope = 'misc'
+          }
+
+          if (-not $counts.ContainsKey($key)) { $counts[$key] = 0 }
+          $counts[$key] += 1
+          if (-not $scopes.ContainsKey($scope)) { $scopes[$scope] = 0 }
+          $scopes[$scope] += 1
+        }
+        # Choose top type and top scope
+        $topType = $counts.GetEnumerator() | Sort-Object -Property Value -Descending | Select-Object -First 1 | ForEach-Object Name
+        $topScope = $scopes.GetEnumerator() | Sort-Object -Property Value -Descending | Select-Object -First 1 | ForEach-Object Name
+        return @{ type = $topType; scope = $topScope }
+      }
+
+      $meta = Get-TypeAndScope $pathsToStage
+      $type = $meta.type
+      $scope = $meta.scope
+
+      # Build a short files summary
+      $shortNames = $pathsToStage | ForEach-Object { Split-Path $_ -Leaf }
+      if ($shortNames.Count -le 3) { $filesSummary = ($shortNames -join ', ') }
+      else { $filesSummary = "$($shortNames.Count) files" }
+
+      $msg = "$type($scope): update $filesSummary"
+
       # Stage only non-excluded paths
       git add -- $pathsToStage
       git commit -m "$msg" | Out-Null
