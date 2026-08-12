@@ -29,7 +29,43 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
   docker compose up -d db
   if ($LASTEXITCODE -ne 0) { Write-Err "Falha ao subir container db"; exit 1 }
 } else {
-  Write-Err "Docker não encontrado na máquina. Por favor instale o Docker e reexecute o script.";
+  Write-Err "Docker não encontrado na máquina. Tentando fallback com 'psql' se disponível..."
+
+  # tentar criar o banco usando psql, baseado em backend/.env (DATABASE_URL)
+  if (Test-Path "backend/.env") {
+    $envContent = Get-Content -Path "backend/.env" -ErrorAction SilentlyContinue
+    $line = $envContent | Where-Object { $_ -match '^\s*DATABASE_URL\s*=\s*' }
+    if ($line) {
+      $val = $line -replace '^\s*DATABASE_URL\s*=\s*',''
+      $val = $val.Trim('"')
+      # parse postgresql://user:pass@host:port/dbname
+      if ($val -match '^postgres(?:ql)?:\/\/(?<user>[^:\/@]+)(:(?<pass>[^@]+))?@(?<host>[^:\/]+)(:(?<port>\d+))?\/(?<db>[^\?]+)') {
+        $user = $matches['user']
+        $pass = $matches['pass']
+        $host = $matches['host']
+        $port = $matches['port'] | ForEach-Object { if ($_){ $_ } else { '5432' } }
+        $db   = $matches['db']
+
+        if (Get-Command psql -ErrorAction SilentlyContinue) {
+          Write-Info "Tentando criar banco '$db' em $host:$port usando psql (usuário: $user)..."
+          $env:PGPASSWORD = $pass
+          # conectar ao banco 'postgres' e criar o banco destino
+          $createCmd = "CREATE DATABASE \"$db\";"
+          & psql -h $host -p $port -U $user -d postgres -c $createCmd
+          if ($LASTEXITCODE -eq 0) { Write-Info "Banco '$db' criado (ou já existia)." } else { Write-Err "Falha ao criar banco via psql. Verifique credenciais/privilegios." }
+          Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+        } else {
+          Write-Err "Comando 'psql' não encontrado. Instale o cliente psql (Postgres) ou instale o Docker e reexecute o script.";
+        }
+      } else {
+        Write-Err "DATABASE_URL no formato inesperado: $val";
+      }
+    } else {
+      Write-Err "Arquivo backend/.env não contém DATABASE_URL. Não é possível criar DB sem Docker.";
+    }
+  } else {
+    Write-Err "Arquivo backend/.env não encontrado. Por favor crie com DATABASE_URL ou instale Docker.";
+  }
 }
 
 # 2) backend: instalar deps, gerar prisma, migrations e seed
