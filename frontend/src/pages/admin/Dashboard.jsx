@@ -18,7 +18,13 @@ export default function AdminDashboard(){
     const token = localStorage.getItem('sb_token')
     if(!token) return navigate('/admin/login')
     setLoading(true)
-    fetch(`${API_BASE}/api/orders?page=${page}&limit=${limit}`, { headers: { Authorization: `Bearer ${token}` } })
+    const params = new URLSearchParams()
+    params.set('page', String(page))
+    params.set('limit', String(limit))
+    if(statusFilter) params.set('status', statusFilter)
+    if(searchQuery && String(searchQuery).trim()) params.set('q', String(searchQuery).trim())
+
+    fetch(`${API_BASE}/api/orders?${params.toString()}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r=>{
         if(r.status === 401) { localStorage.removeItem('sb_token'); navigate('/admin/login'); return null }
         return r.json()
@@ -116,22 +122,7 @@ export default function AdminDashboard(){
             </div>
 
             <div className="space-y-4">
-            {orders.filter(o=>{
-              if(statusFilter && o.status !== statusFilter) return false
-              const q = String(searchQuery || '').trim()
-              if(!q) return true
-              if(/^\d+$/.test(q)){
-                if(String(o.id) === q) return true
-                if((o.phone||'').includes(q)) return true
-                if((o.customer && o.customer.phone || '').includes(q)) return true
-                return false
-              }
-              const ql = q.toLowerCase()
-              if((o.customer && o.customer.name || '').toLowerCase().includes(ql)) return true
-              if((o.phone||'').toLowerCase().includes(ql)) return true
-              if(String(o.id).includes(ql)) return true
-              return false
-            }).map(o=> (
+            {orders.map(o=> (
               <div key={o.id} className="p-4 bg-white rounded shadow">
                 <div className="flex justify-between items-start gap-4">
                   <div className="mr-3">

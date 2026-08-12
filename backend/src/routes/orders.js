@@ -53,8 +53,36 @@ router.post('/', async (req, res) => {
 const { verifyToken } = require('../middleware/auth')
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const orders = await prisma.order.findMany({ include: { items: true, customer: true }, orderBy: { createdAt: 'desc' } })
-    res.json({ ok: true, data: orders })
+    // paginação: ?page=1&limit=10
+    const page = Math.max(1, Number(req.query.page) || 1)
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 10))
+    const skip = (page - 1) * limit
+
+    // busca: ?q=texto (por id, telefone ou nome do cliente)
+    const qRaw = typeof req.query.q === 'string' ? req.query.q.trim() : ''
+    const statusFilter = typeof req.query.status === 'string' && req.query.status ? req.query.status : null
+
+    const where = {}
+    if (statusFilter) where.status = statusFilter
+
+    const orClauses = []
+    if (qRaw) {
+      // buscar por id exato quando for número
+      if (/^\d+$/.test(qRaw)) {
+        orClauses.push({ id: Number(qRaw) })
+      }
+      orClauses.push({ phone: { contains: qRaw } })
+      orClauses.push({ customer: { is: { name: { contains: qRaw, mode: 'insensitive' } } } })
+    }
+    if (orClauses.length) where.OR = orClauses
+
+    const [total, orders] = await prisma.$transaction([
+      prisma.order.count({ where }),
+      prisma.order.findMany({ where, include: { items: true, customer: true }, orderBy: { createdAt: 'desc' }, skip, take: limit })
+    ])
+
+    const totalPages = Math.ceil(total / limit)
+    res.json({ ok: true, data: orders, meta: { total, page, limit, totalPages } })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'internal_error' })
