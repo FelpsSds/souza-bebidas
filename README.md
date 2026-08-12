@@ -68,6 +68,74 @@ Ou use o Docker Compose para subir os 3 serviços:
 docker compose up --build
 ```
 
+### Passo a passo (Windows / PowerShell)
+
+1. Subir o banco com Docker (se quiser usar docker):
+
+```powershell
+cd "c:\Users\rivia\Documents\Souza Bebidas — Sistema de Comércio e Gestão"
+docker compose up -d db
+```
+
+2. Preparar backend (instalar deps, gerar cliente Prisma, rodar migrations e seed):
+
+```powershell
+cd backend
+npm install
+npx prisma generate
+# script helper: executa migrate + seed
+npm run db:setup
+```
+
+3. Subir o backend em modo desenvolvimento:
+
+```powershell
+npm run dev
+```
+
+4. Preparar frontend e rodar dev server:
+
+```powershell
+cd ../frontend
+npm install
+npm run dev
+```
+
+5. Acessar frontend: abra `http://localhost:5173` (ou porta indicada pelo Vite) e o backend em `http://localhost:5000`.
+
+### Sem Docker (Postgres local)
+
+Se preferir não usar Docker, crie o banco Postgres local e ajuste `backend/.env` com `DATABASE_URL`. Depois rode os mesmos passos de instalação/migrate/seed acima.
+
+### Arquivo `.env` de exemplo (backend)
+
+Coloque em `backend/.env`:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/souza_db"
+JWT_SECRET=uma_chave_secreta_aqui
+```
+
+E no `frontend/.env` (opcional):
+
+```env
+VITE_API_BASE=http://localhost:5000
+```
+
+### Verificações rápidas
+
+- Verifique logs do banco: `docker compose logs -f db`
+- Se o `npm run db:setup` falhar, rode manualmente:
+
+```powershell
+npx prisma migrate dev --name init
+node prisma/seed.js
+```
+
+---
+
+Se quiser, eu crio um script PowerShell que executa os passos acima (subir DB, instalar dependências e rodar `db:setup`). Deseja que eu crie o script agora?
+
 ---
 
 ## Rodar sem Docker
