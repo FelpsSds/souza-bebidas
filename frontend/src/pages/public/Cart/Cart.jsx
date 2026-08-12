@@ -6,9 +6,22 @@ import CartItem from '../../../components/Cart/CartItem'
 export default function Cart(){
   const { items, addItem, removeItem, clearCart } = useCart()
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
+  // armazenamos só os dígitos e exibimos formatado
+  const [phoneDigits, setPhoneDigits] = useState('')
   const [delivery, setDelivery] = useState('entrega')
   const [address, setAddress] = useState('')
+
+  function onlyDigits(s){ return (s || '').replace(/\D/g,'') }
+  function formatPhoneBR(d){
+    if(!d) return ''
+    if(d.length <= 2) return `(${d}`
+    if(d.length <= 6) return `(${d.slice(0,2)}) ${d.slice(2)}`
+    if(d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
+    return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7,11)}`
+  }
+  function isValidPhone(d){
+    return d.length === 10 || d.length === 11
+  }
 
   function increase(item){ addItem(item, 1) }
   function decrease(item){ if (item.quantity > 1) addItem(item, -1); else removeItem(item.id) }
@@ -16,7 +29,7 @@ export default function Cart(){
   const total = items.reduce((s,i) => s + i.price * i.quantity, 0)
 
   function sendWhatsApp(){
-    if (!phone) return alert('Informe o telefone para contato')
+    if (!isValidPhone(phoneDigits)) return alert('Informe um telefone válido (10 ou 11 dígitos)')
     let lines = []
     lines.push('Olá! Gostaria de fazer um pedido na Souza Bebidas.')
     lines.push('')
@@ -26,7 +39,7 @@ export default function Cart(){
     lines.push(`Recebimento: ${delivery}`)
     if (delivery === 'entrega') lines.push(`Endereço: ${address}`)
     if (name) lines.push(`Cliente: ${name}`)
-    if (phone) lines.push(`Telefone: ${phone}`)
+    if (phoneDigits) lines.push(`Telefone: ${formatPhoneBR(phoneDigits)}`)
 
     const text = encodeURIComponent(lines.join('\n'))
     window.open(`https://wa.me/?text=${text}`, '_blank')
@@ -57,7 +70,10 @@ export default function Cart(){
               <h2 className="font-semibold mb-2">Dados para contato</h2>
               <div className="grid grid-cols-1 gap-2">
                 <input value={name} onChange={e=>setName(e.target.value)} placeholder="Nome" className="p-2 border rounded" />
-                <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Telefone" className="p-2 border rounded" />
+                <input value={formatPhoneBR(phoneDigits)} onChange={e=>setPhoneDigits(onlyDigits(e.target.value))} placeholder="Telefone (somente números)" className="p-2 border rounded" />
+                {!isValidPhone(phoneDigits) && phoneDigits.length>0 && (
+                  <div className="text-sm text-red-500">Telefone inválido — deve ter 10 ou 11 dígitos.</div>
+                )}
                 <div>
                   <label className="mr-3">
                     <input type="radio" checked={delivery==='entrega'} onChange={()=>setDelivery('entrega')} /> Entrega
@@ -73,7 +89,7 @@ export default function Cart(){
             </div>
 
             <div className="flex gap-3">
-              <button onClick={sendWhatsApp} className="px-4 py-2 bg-[#1F6B45] text-white rounded">Enviar pedido pelo WhatsApp</button>
+              <button onClick={sendWhatsApp} disabled={!isValidPhone(phoneDigits) || items.length===0} className={`px-4 py-2 text-white rounded ${isValidPhone(phoneDigits) && items.length>0 ? 'bg-[#1F6B45]' : 'bg-gray-300 cursor-not-allowed'}`}>Enviar pedido pelo WhatsApp</button>
               <button onClick={clearCart} className="px-4 py-2 border rounded">Limpar carrinho</button>
             </div>
           </div>
