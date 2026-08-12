@@ -91,6 +91,27 @@ export default function AdminProducts(){
                 <input name="price" value={form.price} onChange={handleChange} placeholder="Preço" className="p-2 border rounded" />
                 <input name="stock" value={form.stock} onChange={handleChange} placeholder="Estoque" className="p-2 border rounded" />
                 <input name="images" value={form.images} onChange={handleChange} placeholder="Imagens (separadas por ,)" className="p-2 border rounded col-span-2" />
+                <div className="col-span-2 flex items-center gap-2">
+                  <input type="file" id="fileUpload" className="" />
+                  <button onClick={async ()=>{
+                    const fileInput = document.getElementById('fileUpload')
+                    if(!fileInput || !fileInput.files || fileInput.files.length===0) return alert('Selecione um arquivo')
+                    const fd = new FormData(); fd.append('file', fileInput.files[0])
+                    const token = localStorage.getItem('sb_token')
+                    try{
+                      const resp = await fetch(`${API_BASE}/api/uploads`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd })
+                      const js = await resp.json()
+                      if(resp.status === 401){ localStorage.removeItem('sb_token'); navigate('/admin/login'); return }
+                      if(js && js.ok && js.url){
+                        const full = `${API_BASE}${js.url}`
+                        const imgs = form.images ? form.images + ',' + full : full
+                        setForm(prev=>({ ...prev, images: imgs }))
+                        fileInput.value = ''
+                        alert('Upload realizado')
+                      } else { alert('Upload falhou') }
+                    }catch(err){ console.error(err); alert('Erro no upload') }
+                  }} className="px-3 py-1 border rounded">Upload imagem</button>
+                </div>
                 <textarea name="description" value={form.description} onChange={handleChange} placeholder="Descrição" className="p-2 border rounded col-span-2" />
               </div>
               <div className="flex justify-end gap-2 mt-4">

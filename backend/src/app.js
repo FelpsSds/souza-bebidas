@@ -20,4 +20,10 @@ app.use('/api/products', productsRouter)
 const authRouter = require('./routes/auth')
 app.use('/api/auth', authRouter)
 
+const uploadsRouter = require('./routes/uploads')
+app.use('/api/uploads', uploadsRouter)
+
+const path = require('path')
+app.use('/uploads', express.static(path.join(__dirname, '..', 'public', 'uploads')))
+
 module.exports = app
