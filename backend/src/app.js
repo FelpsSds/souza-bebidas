@@ -10,4 +10,8 @@ app.get('/api/ping',(req,res)=>{
   res.json({ok:true, message:'pong'})
 })
 
+// orders routes
+const ordersRouter = require('./routes/orders')
+app.use('/api/orders', ordersRouter)
+
 module.exports = app
