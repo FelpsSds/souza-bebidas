@@ -21,6 +21,7 @@ model Customer {
   name  String
   phone String
   address String?
+  orders Order[]
 }
 
 model Category {
@@ -40,6 +41,7 @@ model Product {
   images      String[] @default([])
   categoryId  Int
   category    Category @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
 }
 
 model Order {
