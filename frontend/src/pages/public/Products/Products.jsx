@@ -2,12 +2,14 @@ import React, { useState } from 'react'
 import Header from '../../../components/Header/Header'
 import ProductGrid from '../../../components/ProductGrid/ProductGrid'
 import productsData from '../../../services/mockProducts'
+import { useCart } from '../../../contexts/CartContext'
 
 export default function Products(){
   const [products] = useState(productsData)
+  const { addItem } = useCart()
+
   const handleAdd = (product) => {
-    // placeholder: em breve integra com CartContext
-    alert(`Adicionar ${product.name} ao carrinho`)
+    addItem(product, 1)
   }
 
   return (
