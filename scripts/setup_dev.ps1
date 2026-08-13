@@ -40,19 +40,19 @@ if (Get-Command docker -ErrorAction SilentlyContinue) {
       $val = $val.Trim('"')
       # parse postgresql://user:pass@host:port/dbname
       if ($val -match '^postgres(?:ql)?:\/\/(?<user>[^:\/@]+)(:(?<pass>[^@]+))?@(?<host>[^:\/]+)(:(?<port>\d+))?\/(?<db>[^\?]+)') {
-        $user = $matches['user']
-        $pass = $matches['pass']
-        $host = $matches['host']
-        $port = $matches['port'] | ForEach-Object { if ($_){ $_ } else { '5432' } }
-        $db   = $matches['db']
+        $dbUser = $matches['user']
+        $dbPass = $matches['pass']
+        $dbHost = $matches['host']
+        $dbPort = if ($matches['port']) { $matches['port'] } else { '5432' }
+        $dbName = $matches['db']
 
         if (Get-Command psql -ErrorAction SilentlyContinue) {
-          Write-Info ("Tentando criar banco '{0}' em {1}:{2} usando psql (usuário: {3})..." -f $db, $host, $port, $user)
-          $env:PGPASSWORD = $pass
+          Write-Info ("Tentando criar banco '{0}' em {1}:{2} usando psql (usuário: {3})..." -f $dbName, $dbHost, $dbPort, $dbUser)
+          $env:PGPASSWORD = $dbPass
           # conectar ao banco 'postgres' e criar o banco destino
-          $createCmd = 'CREATE DATABASE "' + $db + '";'
-          & psql -h $host -p $port -U $user -d postgres -c $createCmd
-          if ($LASTEXITCODE -eq 0) { Write-Info ("Banco '{0}' criado (ou já existia)." -f $db) } else { Write-Err "Falha ao criar banco via psql. Verifique credenciais/privilegios." }
+          $createCmd = 'CREATE DATABASE "' + $dbName + '";'
+          & psql -h $dbHost -p $dbPort -U $dbUser -d postgres -c $createCmd
+          if ($LASTEXITCODE -eq 0) { Write-Info ("Banco '{0}' criado (ou já existia)." -f $dbName) } else { Write-Err "Falha ao criar banco via psql. Verifique credenciais/privilegios." }
           Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
         } else {
           Write-Err "Comando 'psql' não encontrado. Instale o cliente psql (Postgres) ou instale o Docker e reexecute o script.";
